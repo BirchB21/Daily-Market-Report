@@ -1,0 +1,30 @@
+{
+  "name": "daily-market-report",
+  "version": "1.0.0",
+  "description": "Automated daily market analysis report with AI-powered insights",
+  "main": "generate.js",
+  "scripts": {
+    "start": "node generate.js",
+    "test": "node generate.js"
+  },
+  "keywords": [
+    "market",
+    "trading",
+    "analysis",
+    "anthropic",
+    "claude",
+    "finnhub",
+    "automated-reports"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "axios": "^1.7.7",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.15"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
