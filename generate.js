@@ -2,7 +2,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import nodemailer from 'nodemailer';
 import fetch from 'node-fetch';
 
-// Configuration
 const CONFIG = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   finnhubApiKey: process.env.FINNHUB_API_KEY,
@@ -10,7 +9,6 @@ const CONFIG = {
   emailPass: process.env.EMAIL_PASS,
   recipientEmail: process.env.RECIPIENT_EMAIL,
   
-  // Symbols to track
   symbols: {
     indices: ['SPY', 'QQQ', 'DIA', 'IWM'],
     majors: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META'],
@@ -18,12 +16,10 @@ const CONFIG = {
   }
 };
 
-// Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: CONFIG.anthropicApiKey
 });
 
-// Fetch market data from Finnhub
 async function fetchMarketData(symbol) {
   try {
     const quote = await fetch(
@@ -46,7 +42,6 @@ async function fetchMarketData(symbol) {
   }
 }
 
-// Fetch market news from Finnhub
 async function fetchMarketNews() {
   try {
     const yesterday = new Date();
@@ -58,7 +53,6 @@ async function fetchMarketNews() {
       `https://finnhub.io/api/v1/news?category=general&from=${from}&to=${to}&token=${CONFIG.finnhubApiKey}`
     ).then(res => res.json());
     
-    // Get top 20 most recent news items
     return response.slice(0, 20).map(item => ({
       headline: item.headline,
       summary: item.summary,
@@ -72,7 +66,6 @@ async function fetchMarketNews() {
   }
 }
 
-// Fetch earnings calendar
 async function fetchEarningsCalendar() {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -87,7 +80,6 @@ async function fetchEarningsCalendar() {
   }
 }
 
-// Collect all market data
 async function collectMarketData() {
   console.log('Collecting market data...');
   
@@ -97,13 +89,11 @@ async function collectMarketData() {
     ...CONFIG.symbols.sectors
   ];
   
-  // Fetch data with rate limiting (Finnhub free tier: 60 calls/min)
   const marketData = [];
   for (let i = 0; i < allSymbols.length; i++) {
     const data = await fetchMarketData(allSymbols[i]);
     if (data) marketData.push(data);
     
-    // Rate limit: wait 1 second between calls
     if (i < allSymbols.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -120,7 +110,6 @@ async function collectMarketData() {
   };
 }
 
-// Generate AI analysis using Claude
 async function generateAnalysis(data) {
   console.log('Generating AI analysis...');
   
@@ -203,7 +192,6 @@ Keep the analysis professional, data-driven, and actionable. Use specific number
   }
 }
 
-// Format HTML email
 function formatEmailHTML(analysis, data) {
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -212,101 +200,18 @@ function formatEmailHTML(analysis, data) {
     day: 'numeric'
   });
   
-  // Convert markdown-style sections to HTML with better formatting
   const sections = analysis.split(/\n(?=\d+\.\s+[A-Z\s]+)/);
   
   let htmlContent = sections.map(section => {
-    // Extract section number and title
     const match = section.match(/^(\d+)\.\s+([A-Z\s]+)/);
     if (match) {
       const [, number, title] = match;
       let content = section.replace(/^\d+\.\s+[A-Z\s]+\n/, '');
       
-      // Process content for better formatting
       content = content
-        // Convert bullet points to proper HTML
         .replace(/^-\s+(.+)$/gm, '<li style="margin-bottom: 8px;">$1</li>')
-        // Wrap lists
-        .replace(/(<li[^>]*>.*<\/li>\s*)+/gs, '<ul style="margin: 12px 0; padding-left: 20px;">// Format HTML email
-function formatEmailHTML(analysis, data) {
-  const formattedDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  // Convert markdown-style sections to HTML
-  const sections = analysis.split(/\n(?=\d+\.\s+[A-Z\s]+)/);
-  
-  let htmlContent = sections.map(section => {
-    // Extract section number and title
-    const match = section.match(/^(\d+)\.\s+([A-Z\s]+)/);
-    if (match) {
-      const [, number, title] = match;
-      const content = section.replace(/^\d+\.\s+[A-Z\s]+\n/, '');
-      
-      return `
-        <div style="margin-bottom: 30px;">
-          <h2 style="color: #D4AF37; font-size: 18px; font-weight: 600; margin-bottom: 15px; border-bottom: 2px solid #D4AF37; padding-bottom: 8px;">
-            ${number}. ${title}
-          </h2>
-          <div style="color: #333; line-height: 1.6; white-space: pre-wrap;">
-${content}
-          </div>
-        </div>
-      `;
-    }
-    return `<div style="color: #333; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px;">${section}</div>`;
-  }).join('');
-  
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Market Report</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
-  <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; padding: 0;">
-    
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: #ffffff; padding: 40px 30px; text-align: center;">
-      <h1 style="margin: 0; font-size: 32px; font-weight: 700; letter-spacing: 1px;">
-        DAILY MARKET REPORT
-      </h1>
-      <p style="margin: 10px 0 0 0; font-size: 16px; color: #D4AF37; font-weight: 500;">
-        ${formattedDate}
-      </p>
-      <p style="margin: 5px 0 0 0; font-size: 14px; color: #cccccc;">
-        Generated at ${new Date().toLocaleTimeString('en-US')} EST
-      </p>
-    </div>
-    
-    <!-- Content -->
-    <div style="padding: 40px 30px;">
-      ${htmlContent}
-      
-      <!-- Footer -->
-      <div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #e0e0e0; text-align: center; color: #888;">
-        <p style="margin: 0; font-size: 12px;">
-          This report is generated automatically using market data from Finnhub and AI analysis from Anthropic Claude.
-        </p>
-        <p style="margin: 10px 0 0 0; font-size: 12px;">
-          <strong>Disclaimer:</strong> This report is for informational purposes only and does not constitute investment advice.
-        </p>
-      </div>
-    </div>
-    
-  </div>
-</body>
-</html>
-  `;
-}</ul>')
-        // Bold text with **
+        .replace(/(<li[^>]*>.*?<\/li>\s*)+/gs, '<ul style="margin: 12px 0; padding-left: 20px;">$&</ul>')
         .replace(/\*\*(.+?)\*\*/g, '<strong style="color: #1a1a1a;">$1</strong>')
-        // Preserve line breaks but make paragraphs
         .split('\n\n')
         .map(para => para.trim() ? `<p style="margin: 0 0 12px 0; line-height: 1.7;">${para.replace(/\n/g, '<br>')}</p>` : '')
         .join('');
@@ -327,7 +232,6 @@ ${content}
     return `<div style="color: #2c3e50; line-height: 1.7; margin-bottom: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${section}</div>`;
   }).join('');
   
-  // Market summary cards at the top
   const majorIndices = data.marketData.filter(d => CONFIG.symbols.indices.includes(d.symbol));
   const summaryCards = majorIndices.map(index => {
     const changeColor = index.changePercent >= 0 ? '#10b981' : '#ef4444';
@@ -335,7 +239,7 @@ ${content}
     return `
       <div style="flex: 1; min-width: 150px; background: #f8f9fa; padding: 16px; border-radius: 8px; text-align: center; border-left: 4px solid ${changeColor};">
         <div style="font-size: 13px; color: #6c757d; font-weight: 600; margin-bottom: 8px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${index.symbol}</div>
-        <div style="font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${index.current?.toFixed(2) || 'N/A'}</div>
+        <div style="font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">$${index.current?.toFixed(2) || 'N/A'}</div>
         <div style="font-size: 14px; font-weight: 600; color: ${changeColor}; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
           ${changeSymbol} ${index.changePercent?.toFixed(2) || '0.00'}%
         </div>
@@ -354,7 +258,6 @@ ${content}
 <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f0f2f5;">
   <div style="max-width: 900px; margin: 0 auto; background-color: #ffffff;">
     
-    <!-- Header -->
     <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%); color: #ffffff; padding: 50px 40px; position: relative; overflow: hidden;">
       <div style="position: relative; z-index: 1;">
         <div style="font-size: 14px; color: #D4AF37; font-weight: 600; letter-spacing: 2px; margin-bottom: 12px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">INSTITUTIONAL RESEARCH</div>
@@ -373,7 +276,6 @@ ${content}
       <div style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(212,175,55,0) 70%); border-radius: 50%;"></div>
     </div>
     
-    <!-- Market Summary Cards -->
     <div style="background: #ffffff; padding: 30px 40px; border-bottom: 1px solid #e5e7eb;">
       <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Market Snapshot</h3>
       <div style="display: flex; gap: 16px; flex-wrap: wrap;">
@@ -381,12 +283,10 @@ ${content}
       </div>
     </div>
     
-    <!-- Content -->
     <div style="padding: 50px 40px; background: #ffffff;">
       ${htmlContent}
     </div>
     
-    <!-- Footer -->
     <div style="background: #f8f9fa; padding: 40px; border-top: 3px solid #D4AF37;">
       <div style="max-width: 700px; margin: 0 auto; text-align: center;">
         <div style="margin-bottom: 20px;">
@@ -411,7 +311,6 @@ ${content}
   `;
 }
 
-// Send email
 async function sendEmail(htmlContent) {
   console.log('Sending email...');
   
@@ -440,32 +339,26 @@ async function sendEmail(htmlContent) {
   }
 }
 
-// Main execution
 async function main() {
   try {
     console.log('=== Daily Market Report Generator ===');
     console.log('Starting report generation...\n');
     
-    // Validate environment variables
     if (!CONFIG.anthropicApiKey || !CONFIG.finnhubApiKey || !CONFIG.emailUser || !CONFIG.emailPass || !CONFIG.recipientEmail) {
       throw new Error('Missing required environment variables. Please check your configuration.');
     }
     
-    // Step 1: Collect market data
     const marketData = await collectMarketData();
     console.log(`✓ Collected data for ${marketData.marketData.length} symbols`);
     console.log(`✓ Collected ${marketData.news.length} news articles`);
     console.log(`✓ Collected ${marketData.earnings.length} earnings reports\n`);
     
-    // Step 2: Generate AI analysis
     const analysis = await generateAnalysis(marketData);
     console.log('✓ Generated AI analysis\n');
     
-    // Step 3: Format email
     const htmlContent = formatEmailHTML(analysis, marketData);
     console.log('✓ Formatted email content\n');
     
-    // Step 4: Send email
     await sendEmail(htmlContent);
     console.log('✓ Email sent successfully\n');
     
@@ -477,5 +370,4 @@ async function main() {
   }
 }
 
-// Run the script
 main();
