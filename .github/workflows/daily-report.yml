@@ -1,0 +1,42 @@
+name: Daily Market Report
+
+on:
+  schedule:
+    # Runs at 11:00 UTC (7:00 AM EST) Monday-Friday
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate and send market report
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          TZ: 'America/New_York'
+        run: node generate.js
+
+      - name: Report completion
+        if: success()
+        run: echo "Market report generated and sent successfully!"
+
+      - name: Report failure
+        if: failure()
+        run: echo "Failed to generate or send market report. Check logs for details."
