@@ -113,67 +113,60 @@ async function collectMarketData() {
 async function generateAnalysis(data) {
   console.log('Generating AI analysis...');
   
+  const indicesData = data.marketData.filter(d => CONFIG.symbols.indices.includes(d.symbol));
+  const sectorsData = data.marketData.filter(d => CONFIG.symbols.sectors.includes(d.symbol));
+  const majorsData = data.marketData.filter(d => CONFIG.symbols.majors.includes(d.symbol));
+  
   const prompt = `You are an expert financial analyst. Analyze the following market data and news from the previous market close to now, and create a comprehensive pre-market report for professional traders.
 
-MARKET DATA:
-${JSON.stringify(data.marketData, null, 2)}
+MAJOR INDICES:
+${JSON.stringify(indicesData, null, 2)}
 
-OVERNIGHT NEWS (Top Stories):
+MAJOR STOCKS:
+${JSON.stringify(majorsData, null, 2)}
+
+SECTOR ETFS:
+${JSON.stringify(sectorsData, null, 2)}
+
+OVERNIGHT NEWS:
 ${JSON.stringify(data.news, null, 2)}
 
 EARNINGS TODAY:
 ${JSON.stringify(data.earnings, null, 2)}
 
-Please provide a detailed analysis structured in the following sections:
+Create a detailed analysis with these EXACT sections (use these exact titles):
 
-1. EXECUTIVE SUMMARY
-   - Brief 2-3 sentence overview of market sentiment and key overnight developments
+EXECUTIVE SUMMARY
+Write 3-4 sentences summarizing overall market sentiment, key overnight developments, and the trading outlook for today.
 
-2. MARKET OVERVIEW
-   - Analysis of major indices (SPY, QQQ, DIA, IWM) performance
-   - Overall market direction and momentum
-   - Key technical levels
+MAJOR INDICES ANALYSIS
+Analyze SPY, QQQ, DIA, and IWM performance. Include specific price levels, percentage changes, technical levels, and momentum indicators.
 
-3. OVERNIGHT NEWS ANALYSIS
-   - Summarize the most important news stories
-   - Explain market impact of each major story
-   - Identify themes and trends
+TOP HEADLINES
+List and analyze the 5-7 most important news stories. For each headline, provide: the headline itself, why it matters, and potential market impact.
 
-4. SECTOR ANALYSIS
-   - Performance breakdown by sector
-   - Leading and lagging sectors
-   - Sector rotation signals
+SECTOR PERFORMANCE
+Analyze all 11 sectors (XLK, XLF, XLE, XLV, XLI, XLY, XLP, XLRE, XLB, XLU, XLC). Identify leaders, laggards, and rotation trends. Use specific percentages.
 
-5. PRE-MARKET MOVERS
-   - Biggest gainers and losers
-   - Volume and volatility analysis
-   - Catalysts for significant moves
+PRE-MARKET MOVERS
+Identify the biggest gainers and losers from the major stocks list. Include catalysts and volume analysis.
 
-6. EARNINGS HIGHLIGHTS
-   - Companies reporting today
-   - Expected market impact
-   - Sectors to watch
+EARNINGS CALENDAR
+Summarize companies reporting today and expected market impact.
 
-7. KEY ECONOMIC EVENTS
-   - Important data releases or events today
-   - Expected market impact
+ECONOMIC EVENTS
+List important economic data releases or events scheduled for today.
 
-8. RISK FACTORS
-   - Potential headwinds or concerns
-   - Volatility indicators
-   - Key levels to watch
+RISK ASSESSMENT
+Identify key risks, volatility indicators, and critical support/resistance levels to watch.
 
-9. TRADING OPPORTUNITIES
-   - Potential setups based on overnight action
-   - Risk/reward considerations
-   - Recommended watchlist
+TRADING OPPORTUNITIES
+Provide 3-5 specific trading ideas or setups based on the overnight action. Include entry considerations and key levels.
 
-10. BOTTOM LINE
-    - Clear, actionable summary
-    - Market bias (bullish/bearish/neutral)
-    - Key levels and catalysts for the day
+BOTTOM LINE
+Provide a clear, actionable conclusion with: market bias (bullish/bearish/neutral), key catalysts for the day, and 2-3 must-watch items.
 
-Keep the analysis professional, data-driven, and actionable. Use specific numbers and percentages. Be concise but thorough.`;
+Keep each section concise, data-driven, and professional. Use specific numbers and percentages throughout.`;
 
   try {
     const message = await anthropic.messages.create({
@@ -193,6 +186,53 @@ Keep the analysis professional, data-driven, and actionable. Use specific number
 }
 
 function formatEmailHTML(analysis, data) {
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  const sectionIcons = {
+    'EXECUTIVE SUMMARY': '📋',
+    'MAJOR INDICES ANALYSIS': '📊',
+    'TOP HEADLINES': '📰',
+    'SECTOR PERFORMANCE': '🏭',
+    'PRE-MARKET MOVERS': '🚀',
+    'EARNINGS CALENDAR': '💼',
+    'ECONOMIC EVENTS': '📅',
+    'RISK ASSESSMENT': '⚠️',
+    'TRADING OPPORTUNITIES': '💡',
+    'BOTTOM LINE': '🎯'
+  };
+  
+  const sectionColors = {
+    'EXECUTIVE SUMMARY': '#8B5CF6',
+    'MAJOR INDICES ANALYSIS': '#3B82F6',
+    'TOP HEADLINES': '#EF4444',
+    'SECTOR PERFORMANCE': '#10B981',
+    'PRE-MARKET MOVERS': '#F59E0B',
+    'EARNINGS CALENDAR': '#6366F1',
+    'ECONOMIC EVENTS': '#EC4899',
+    'RISK ASSESSMENT': '#DC2626',
+    'TRADING OPPORTUNITIES': '#059669',
+    'BOTTOM LINE': '#D4AF37'
+  };
+  
+  const sections = analysis.split(/\n(?=[A-Z\s]+\n)/);
+  
+  let htmlContent = sections.map(section => {
+    const lines = section.split('\n');
+    const title = lines[0].trim();
+    
+    if (sectionIcons[title]) {
+      const content = lines.slice(1).join('\n');
+      const icon = sectionIcons[title];
+      const color = sectionColors[title];
+      
+      let formattedContent = content
+        .replace(/^-\s+(.+)$/gm, '<li style="margin-bottom: 10px; line-height: 1.6;">$1</li>')
+        .replace(/(<li[^>]*>.*?<\/li>\s*)+/gs, '<ul style="margin: 16px 0; padding-left: 24px; list-style-type: disc;">function formatEmailHTML(analysis, data) {
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -300,6 +340,151 @@ function formatEmailHTML(analysis, data) {
         <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #dee2e6;">
           <p style="margin: 0; font-size: 12px; color: #868e96; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
             <strong style="color: #495057;">IMPORTANT DISCLAIMER:</strong> This report is for informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other sort of advice. You should not treat any of the report's content as such. Do your own research and consult with a licensed financial advisor before making any investment decisions.
+          </p>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</body>
+</html>
+  `;
+}</ul>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong style="color: #1a1a1a; font-weight: 700;">$1</strong>')
+        .split('\n\n')
+        .filter(p => p.trim())
+        .map(para => {
+          para = para.trim();
+          if (!para.startsWith('<ul') && !para.startsWith('<li')) {
+            return `<p style="margin: 0 0 14px 0; line-height: 1.8; color: #374151;">${para.replace(/\n/g, '<br>')}</p>`;
+          }
+          return para;
+        })
+        .join('');
+      
+      return `
+        <div style="margin-bottom: 45px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+          <div style="background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%); padding: 18px 28px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">${icon}</span>
+            <h2 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 0.3px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+              ${title}
+            </h2>
+          </div>
+          <div style="padding: 28px; font-size: 15px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            ${formattedContent}
+          </div>
+        </div>
+      `;
+    }
+    return '';
+  }).filter(s => s).join('');
+  
+  const majorIndices = data.marketData.filter(d => CONFIG.symbols.indices.includes(d.symbol));
+  const summaryCards = majorIndices.map(index => {
+    const changeColor = index.changePercent >= 0 ? '#10b981' : '#ef4444';
+    const changeSymbol = index.changePercent >= 0 ? '▲' : '▼';
+    const changeBg = index.changePercent >= 0 ? '#d1fae5' : '#fee2e2';
+    
+    return `
+      <div style="flex: 1; min-width: 160px; background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%); padding: 20px; border-radius: 12px; text-align: center; border: 2px solid ${changeColor}; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="font-size: 14px; color: #6b7280; font-weight: 700; margin-bottom: 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 0.5px;">${index.symbol}</div>
+        <div style="font-size: 26px; font-weight: 800; color: #111827; margin-bottom: 8px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${index.current?.toFixed(2) || 'N/A'}</div>
+        <div style="display: inline-block; background: ${changeBg}; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 700; color: ${changeColor}; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          ${changeSymbol} ${Math.abs(index.changePercent || 0).toFixed(2)}%
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  const topMovers = data.marketData
+    .filter(d => CONFIG.symbols.majors.includes(d.symbol))
+    .sort((a, b) => Math.abs(b.changePercent || 0) - Math.abs(a.changePercent || 0))
+    .slice(0, 5);
+    
+  const moversCards = topMovers.map(stock => {
+    const changeColor = stock.changePercent >= 0 ? '#10b981' : '#ef4444';
+    const changeSymbol = stock.changePercent >= 0 ? '▲' : '▼';
+    
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${changeColor};">
+        <div>
+          <div style="font-size: 16px; font-weight: 700; color: #111827; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${stock.symbol}</div>
+          <div style="font-size: 13px; color: #6b7280; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${stock.current?.toFixed(2) || 'N/A'}</div>
+        </div>
+        <div style="font-size: 16px; font-weight: 700; color: ${changeColor}; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          ${changeSymbol} ${Math.abs(stock.changePercent || 0).toFixed(2)}%
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Market Report</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <div style="max-width: 920px; margin: 0 auto; background-color: #f8fafc;">
+    
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 60px 40px; position: relative; overflow: hidden;">
+      <div style="position: relative; z-index: 1;">
+        <div style="display: inline-block; background: rgba(212, 175, 55, 0.2); border: 2px solid #D4AF37; padding: 8px 20px; border-radius: 30px; margin-bottom: 20px;">
+          <span style="font-size: 13px; color: #D4AF37; font-weight: 700; letter-spacing: 2px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">INSTITUTIONAL RESEARCH</span>
+        </div>
+        <h1 style="margin: 0; font-size: 48px; font-weight: 900; letter-spacing: -1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.1; background: linear-gradient(135deg, #ffffff 0%, #D4AF37 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          Daily Market Report
+        </h1>
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid rgba(212, 175, 55, 0.3);">
+          <p style="margin: 0; font-size: 20px; color: #D4AF37; font-weight: 700; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            ${formattedDate}
+          </p>
+          <p style="margin: 10px 0 0 0; font-size: 14px; color: #94a3b8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            Pre-Market Analysis • Generated ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+          </p>
+        </div>
+      </div>
+      <div style="position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0) 70%); border-radius: 50%;"></div>
+      <div style="position: absolute; bottom: -50px; left: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(102,126,234,0.15) 0%, rgba(102,126,234,0) 70%); border-radius: 50%;"></div>
+    </div>
+    
+    <div style="background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); padding: 35px 40px; border-bottom: 2px solid #e2e8f0;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <span style="font-size: 24px;">📊</span>
+        <h3 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Market Indices</h3>
+      </div>
+      <div style="display: flex; gap: 18px; flex-wrap: wrap;">
+        ${summaryCards}
+      </div>
+    </div>
+    
+    <div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); padding: 35px 40px; border-bottom: 2px solid #e2e8f0;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <span style="font-size: 24px;">🔥</span>
+        <h3 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Top Movers</h3>
+      </div>
+      ${moversCards}
+    </div>
+    
+    <div style="padding: 50px 40px; background: #f8fafc;">
+      ${htmlContent}
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 50px 40px;">
+      <div style="max-width: 700px; margin: 0 auto; text-align: center;">
+        <div style="margin-bottom: 24px;">
+          <div style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 100%); color: #1a1a1a; padding: 10px 28px; border-radius: 30px; font-size: 13px; font-weight: 800; letter-spacing: 1.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-shadow: 0 4px 12px rgba(212,175,55,0.3);">
+            ⚡ POWERED BY AI
+          </div>
+        </div>
+        <p style="margin: 0 0 14px 0; font-size: 14px; color: #94a3b8; line-height: 1.7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          This report is automatically generated using real-time market data from <strong style="color: #D4AF37;">Finnhub</strong><br>and advanced AI analysis powered by <strong style="color: #D4AF37;">Anthropic Claude</strong>.
+        </p>
+        <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid rgba(148,163,184,0.2);">
+          <p style="margin: 0; font-size: 12px; color: #64748b; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6;">
+            <strong style="color: #94a3b8;">IMPORTANT DISCLAIMER:</strong> This report is for informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other sort of advice. Past performance is not indicative of future results. You should not treat any of the report's content as such. Do your own research and consult with a licensed financial advisor before making any investment decisions.
           </p>
         </div>
       </div>
