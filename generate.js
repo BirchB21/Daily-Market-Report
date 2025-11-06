@@ -212,6 +212,30 @@ function formatEmailHTML(analysis, data) {
     day: 'numeric'
   });
   
+  // Convert markdown-style sections to HTML with better formatting
+  const sections = analysis.split(/\n(?=\d+\.\s+[A-Z\s]+)/);
+  
+  let htmlContent = sections.map(section => {
+    // Extract section number and title
+    const match = section.match(/^(\d+)\.\s+([A-Z\s]+)/);
+    if (match) {
+      const [, number, title] = match;
+      let content = section.replace(/^\d+\.\s+[A-Z\s]+\n/, '');
+      
+      // Process content for better formatting
+      content = content
+        // Convert bullet points to proper HTML
+        .replace(/^-\s+(.+)$/gm, '<li style="margin-bottom: 8px;">$1</li>')
+        // Wrap lists
+        .replace(/(<li[^>]*>.*<\/li>\s*)+/gs, '<ul style="margin: 12px 0; padding-left: 20px;">// Format HTML email
+function formatEmailHTML(analysis, data) {
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
   // Convert markdown-style sections to HTML
   const sections = analysis.split(/\n(?=\d+\.\s+[A-Z\s]+)/);
   
@@ -272,6 +296,112 @@ ${content}
         <p style="margin: 10px 0 0 0; font-size: 12px;">
           <strong>Disclaimer:</strong> This report is for informational purposes only and does not constitute investment advice.
         </p>
+      </div>
+    </div>
+    
+  </div>
+</body>
+</html>
+  `;
+}</ul>')
+        // Bold text with **
+        .replace(/\*\*(.+?)\*\*/g, '<strong style="color: #1a1a1a;">$1</strong>')
+        // Preserve line breaks but make paragraphs
+        .split('\n\n')
+        .map(para => para.trim() ? `<p style="margin: 0 0 12px 0; line-height: 1.7;">${para.replace(/\n/g, '<br>')}</p>` : '')
+        .join('');
+      
+      return `
+        <div style="margin-bottom: 40px; page-break-inside: avoid;">
+          <div style="background: linear-gradient(90deg, #D4AF37 0%, #F4D03F 100%); padding: 12px 20px; margin-bottom: 20px; border-radius: 4px;">
+            <h2 style="color: #1a1a1a; font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 0.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+              ${number}. ${title}
+            </h2>
+          </div>
+          <div style="color: #2c3e50; font-size: 15px; line-height: 1.7; padding: 0 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            ${content}
+          </div>
+        </div>
+      `;
+    }
+    return `<div style="color: #2c3e50; line-height: 1.7; margin-bottom: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${section}</div>`;
+  }).join('');
+  
+  // Market summary cards at the top
+  const majorIndices = data.marketData.filter(d => CONFIG.symbols.indices.includes(d.symbol));
+  const summaryCards = majorIndices.map(index => {
+    const changeColor = index.changePercent >= 0 ? '#10b981' : '#ef4444';
+    const changeSymbol = index.changePercent >= 0 ? '▲' : '▼';
+    return `
+      <div style="flex: 1; min-width: 150px; background: #f8f9fa; padding: 16px; border-radius: 8px; text-align: center; border-left: 4px solid ${changeColor};">
+        <div style="font-size: 13px; color: #6c757d; font-weight: 600; margin-bottom: 8px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${index.symbol}</div>
+        <div style="font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${index.current?.toFixed(2) || 'N/A'}</div>
+        <div style="font-size: 14px; font-weight: 600; color: ${changeColor}; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          ${changeSymbol} ${index.changePercent?.toFixed(2) || '0.00'}%
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Market Report</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f0f2f5;">
+  <div style="max-width: 900px; margin: 0 auto; background-color: #ffffff;">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%); color: #ffffff; padding: 50px 40px; position: relative; overflow: hidden;">
+      <div style="position: relative; z-index: 1;">
+        <div style="font-size: 14px; color: #D4AF37; font-weight: 600; letter-spacing: 2px; margin-bottom: 12px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">INSTITUTIONAL RESEARCH</div>
+        <h1 style="margin: 0; font-size: 42px; font-weight: 800; letter-spacing: -0.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.1;">
+          Daily Market Report
+        </h1>
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid #D4AF37;">
+          <p style="margin: 0; font-size: 18px; color: #D4AF37; font-weight: 600; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            ${formattedDate}
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: 14px; color: #b0b0b0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            Market Analysis • Generated at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+          </p>
+        </div>
+      </div>
+      <div style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(212,175,55,0) 70%); border-radius: 50%;"></div>
+    </div>
+    
+    <!-- Market Summary Cards -->
+    <div style="background: #ffffff; padding: 30px 40px; border-bottom: 1px solid #e5e7eb;">
+      <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Market Snapshot</h3>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+        ${summaryCards}
+      </div>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding: 50px 40px; background: #ffffff;">
+      ${htmlContent}
+    </div>
+    
+    <!-- Footer -->
+    <div style="background: #f8f9fa; padding: 40px; border-top: 3px solid #D4AF37;">
+      <div style="max-width: 700px; margin: 0 auto; text-align: center;">
+        <div style="margin-bottom: 20px;">
+          <div style="display: inline-block; background: #1a1a1a; color: #D4AF37; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 1px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            POWERED BY AI
+          </div>
+        </div>
+        <p style="margin: 0 0 12px 0; font-size: 13px; color: #6c757d; line-height: 1.6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          This report is generated automatically using real-time market data from Finnhub<br>and advanced AI analysis from Anthropic Claude.
+        </p>
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #dee2e6;">
+          <p style="margin: 0; font-size: 12px; color: #868e96; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+            <strong style="color: #495057;">IMPORTANT DISCLAIMER:</strong> This report is for informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other sort of advice. You should not treat any of the report's content as such. Do your own research and consult with a licensed financial advisor before making any investment decisions.
+          </p>
+        </div>
       </div>
     </div>
     
